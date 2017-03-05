@@ -12,9 +12,11 @@ class Box:
         self.endX = box[1][0]
         self.endY = box[1][1]
         self.center = self.calculate_center()
-        self.width = box[1][0] - box[0][0]
-        self.height = box[1][1] - box[0][1]
-        self.heat = 0
+        self.width = self.calculate_width()
+        self.height =self.calculate_height()
+        self.heat = 0 # #
+        self.speed = [0,0] # speed vector in xy pixel coordinates
+        self.age = 0
 
     def __delitem__(self, key):
         self.__delattr__(key)
@@ -26,16 +28,22 @@ class Box:
             return (self.__getattribute__('endX'), self.__getattribute__('endY'))
 
     def calculate_center(self):
-        return ((self.startX + self.endX) / 2., (self.startY + self.endY) / 2.)
+        return [(self.startX + self.endX) / 2., (self.startY + self.endY) / 2.]
 
     def calculate_distance(self, other):
         return math.sqrt((self.center[0] - other.center[0]) ** 2 + (self.center[1] - other.center[1]) ** 2)
 
     def isEqual(self, other):
-        return self.close(other) & (abs(self.width - other.width) < 40) & (abs(self.height - other.height) < 20)
+        return self.close(other) & (abs(self.width - other.width) < 100) & (abs(self.height - other.height) < 100)
 
     def close(self, other):
-        return (self.calculate_distance(other) < 1000)
+        return (self.calculate_distance(other) < 200)
+
+    def calculate_width(self):
+        return self.endX - self.startX
+
+    def calculate_height(self):
+        return self.endY - self.startY
 
     def printCords(self):
         print('startX  :', self.startX, ' ,startY  :', self.startY, ' ,endX  :', self.endX, ' ,endY  :', self.endY)
@@ -55,8 +63,12 @@ class Box:
         self.heat = sum_heat / 2.
         del other
 
+    def calculate_speed(self,old):
+        self.speed[0] = self.center[0] - old.center[0]
+        self.speed[1] = self.center[1] - old.center[1]
+
     def _print(self):
-        print('center  :', self.center, ' widht : ', self.width, ' height : ', self.height, ' heat : ', self.heat)
+        print('center  :', self.center, ' widht : ', self.width, ' height : ', self.height, ' heat : ', self.heat , ' speed ' , self.speed)
 
 
 # Define a function you will pass an image
@@ -94,15 +106,7 @@ def search_windows(img, windows, clf, scaler, color_space='RGB',
     # Define a function to draw bounding boxes
 
 
-def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
-    # Make a copy of the image
-    imcopy = np.copy(img)
-    # Iterate through the bounding boxes 2
-    for bbox in bboxes:
-        # Draw a rectangle given bbox coordinates
-        cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
-    # Return the image copy with boxes drawn
-    return imcopy
+
 
 
 class VehicleDetector:
@@ -136,6 +140,7 @@ class VehicleDetector:
         index = 1
         x_q = int(self.image.shape[1] / 4)
         # split x into 3 region 0:width/4 , withd/4: 3*width/4 , 3*width/4:width
+        """""
         for startx in range(0, self.image.shape[1], x_q):
             self.search_windows += slide_window(self.image, x_start_stop=[startx, startx + x_q],
                                                 y_start_stop=[400, 500],
@@ -150,7 +155,24 @@ class VehicleDetector:
                                                 y_start_stop=[500, 690],
                                                 xy_window=(160 * int(index / 2), 160), xy_overlap=(0.5, 0.5))
             index += 1
-
+        """
+        self.search_windows += slide_window(self.image.shape, x_start_stop=[0,image.shape[1]],
+                                            y_start_stop=[400, 500],
+                                            xy_window=(80, 80), xy_overlap=(0.75, 0.75))
+        self.search_windows += slide_window(self.image.shape, x_start_stop=[None, None],
+                                            y_start_stop=[400, 500],
+                                            xy_window=(100, 100), xy_overlap=(0.5, 0.5))
+        self.search_windows += slide_window(self.image.shape, x_start_stop=[None, None],
+                                            y_start_stop=[420, 660],
+                                            xy_window=(120, 120), xy_overlap=(0.5, 0.5))
+        self.search_windows += slide_window(self.image.shape, x_start_stop=[None, None],
+                                            y_start_stop=[500, 690],
+                                            xy_window=(160, 160), xy_overlap=(0.5, 0.5))
+    def create_search_windows2(self):
+        # split x into 3 region 0:width/4 , withd/4: 3*width/4 , 3*width/4:width
+        self.search_windows = slide_window(self.image, x_start_stop=[0,1200],
+                                            y_start_stop=[400, 500],
+                                            xy_window=(80, 80), xy_overlap=(0.75, 0.75))
     def create_heatmap(self, bbox_list):
         heatmap = np.zeros_like(self.image[:, :, 0]).astype(np.float)
         for box in bbox_list:
@@ -243,6 +265,22 @@ def apply_threshold(heatmap, threshold):
     # Return thresholded map
     return heatmap
 
+def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
+    # Make a copy of the image
+    imcopy = np.copy(img)
+    # Iterate through the bounding boxes 2
+
+    for bbox in bboxes:
+        # Draw a rectangle given bbox coordinates
+        if bbox.heat > 14:
+            cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            speed_text = "Heat: {0:.2f} ".format(bbox.heat)
+            cv2.putText(imcopy, speed_text, (int(bbox.center[0]),int(bbox.center[1])), font, 1, (255, 255, 255), 2)
+            #speed_text = "Y Speed: {0:.2f} ".format(bbox.speed[1])
+            #cv2.putText(imcopy, speed_text, (int(bbox.center[0]),int(bbox.center[1]+20)), font, 1, (255, 255, 255), 2)
+    # Return the image copy with boxes drawn
+    return imcopy
 
 def draw_labeled_bboxes(img,labels):
     # Iterate through all detected cars
@@ -259,13 +297,12 @@ def draw_labeled_bboxes(img,labels):
     # Return the image
     return img
 
-def locate_cars(img,image):
+def locate_cars(img):
     # Iterate through all detected cars
     # Find final boxes from heatmap using label function
-    add_heat(img,vehicleDetertor.old_positions)
-    apply_threshold(img,len(vehicleDetertor.old_positions)-1)
-    for old_car in vehicleDetertor.old_positions:
-        old_car._print()
+    #add_heat(img,vehicleDetertor.old_positions)
+    #apply_threshold(img,len(vehicleDetertor.old_positions)-1)
+
 
     labels = label(img)
     car_list = []
@@ -278,11 +315,34 @@ def locate_cars(img,image):
         # Define a bounding box based on min/max x and y
         bbox = Box(((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy))))
         bbox.heat = img[bbox.center[1]][bbox.center[0]]
+        #if bbox.heat > 5:
         car_list.append(bbox)
-        cv2.rectangle(image, bbox[0], bbox[1], (0, 0, 255), 6)
 
     # Return car list
-    return car_list , image
+
+    for old_car in vehicleDetertor.old_positions:
+        #print('old cars : ')
+        #old_car._print()
+        #print()
+        found = False
+        for car in car_list:
+            #print('new cars : ')
+            #car._print()
+            if car.isEqual(old_car):
+                #print('is  equal : ')
+                car.calculate_speed(old_car)
+                car.heat = max(car.heat,old_car.heat) + 1
+                found = True
+                break
+
+        if not found and old_car.heat > 3 and old_car.age < 4:
+            #print(' old car not found in the new frame but shoud be there :   ' ,old_car.heat)
+            old_car.age +=1
+            old_car.heat -=1
+            car_list.append(old_car)
+
+        #print()
+    return car_list
 
 def process_image(image):
     copy_image = np.copy(image)
@@ -300,13 +360,16 @@ def process_image(image):
                                  hog_feat=vehicleDetertor.parameters['hog_feat'])
     heat = np.zeros_like(image[:, :, 0]).astype(np.float)
     add_heat(heat,hot_windows)
-    apply_threshold(heat,2)
+    apply_threshold(heat,1)
     # Visualize the heatmap when displaying
     #heatmap = np.clip(heat, 0, 255)
-    draw_img = np.copy(image)
-    vehicleDetertor.car_list,draw_img = locate_cars(heat,image)
-    #labels = label(heat)
 
+    VehicleDetector.old_positions = vehicleDetertor.car_list
+    vehicleDetertor.car_list = locate_cars(heat)
+
+    #labels = label(heat)
+    #draw_img = draw_labeled_bboxes(image,labels)
+    draw_img = draw_boxes(image,vehicleDetertor.car_list)
     return draw_img
 
 
@@ -314,7 +377,7 @@ import os
 from moviepy.editor import VideoFileClip
 white_output = 'white.mp4' # New video
 os.remove(white_output)
-clip1 = VideoFileClip('project_video.mp4').subclip(38.00,45.00) # project video
+clip1 = VideoFileClip('project_video.mp4')#.subclip(21.00,25.00) # project video
 #clip = VideoFileClip("myHolidays.mp4", audio=True).subclip(50,60)
 white_clip = clip1.fl_image(process_image) #NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
