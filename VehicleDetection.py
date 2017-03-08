@@ -153,9 +153,18 @@ def search_windows(img, windows, clf, scaler, color_space='YCrCb',
 
 
 class VehicleDetector:
+    """
+    Class to detect vehicles on video stream it
+    :param old_positions list to keep track of the cars located on previous frames
+    :param car_list list to keep located cars on current frame
+    :param scv classifier to classify windows whether it is car or not
+    :param X_scaler standart scaler for normalization
+    :param parameters feature parameters
+    :param debug flag to enable/disable  debugging
+    :param ımage_shape shape of the image to be work on
+    """
     old_positions = []  # positions of detectefd vehicles on the last frame
     car_list = []
-    probablities = []
     svc = None
     X_scaler = None
     parameters = None
@@ -168,8 +177,12 @@ class VehicleDetector:
         self.search_windows = []
         self.create_search_windows()
         self.load_cls_params()
+        self.image_shape = image.shape
 
     def load_cls_params(self):
+        """
+        Method to load classifier, scaler and feature parameters from file
+        """
         with open('models/linear_svc.p', 'rb') as model_file:
             model = pickle.load(model_file)
             self.svc = model['svc']
@@ -179,29 +192,13 @@ class VehicleDetector:
         print(self.parameters)
 
     def age_heat_map(self):
+        """
+        Method to age old vehıcles by reducing heat
+        """
         nonzero = self.heat.nonzero()
         self.heat[nonzero] -= 1
 
     def create_search_windows(self):
-        index = 1
-        x_q = int(self.image.shape[1] / 4)
-        # split x into 3 region 0:width/4 , withd/4: 3*width/4 , 3*width/4:width
-        """
-        for startx in range(0, self.image.shape[1], x_q):
-            self.search_windows += slide_window(self.image, x_start_stop=[startx, startx + x_q],
-                                                y_start_stop=[400, 500],
-                                                xy_window=(80 * int(index / 2), 80), xy_overlap=(0.75, 0.75))
-            self.search_windows += slide_window(self.image, x_start_stop=[startx, startx + x_q],
-                                                y_start_stop=[400, 500],
-                                                xy_window=(100 * int(index / 2), 100), xy_overlap=(0.75, 0.75))
-            self.search_windows += slide_window(self.image, x_start_stop=[startx, startx + x_q],
-                                                y_start_stop=[420, 660],
-                                                xy_window=(120 * int(index / 2), 120), xy_overlap=(0.5, 0.5))
-            self.search_windows += slide_window(self.image, x_start_stop=[startx, startx + x_q],
-                                                y_start_stop=[500, 690],
-                                                xy_window=(160 * int(index / 2), 160), xy_overlap=(0.5, 0.5))
-            index += 1
-        """
         self.search_windows += slide_window(self.image.shape, x_start_stop=[0, image.shape[1]],
                                             y_start_stop=[400, 500],
                                             xy_window=(80, 80), xy_overlap=(0.75, 0.75))
@@ -215,82 +212,6 @@ class VehicleDetector:
                                             y_start_stop=[500, 690],
                                             xy_window=(160, 160), xy_overlap=(0.5, 0.5))
 
-    def create_search_windows2(self):
-        # split x into 3 region 0:width/4 , withd/4: 3*width/4 , 3*width/4:width
-        self.search_windows = slide_window(self.image, x_start_stop=[0, 1200],
-                                           y_start_stop=[400, 500],
-                                           xy_window=(80, 80), xy_overlap=(0.75, 0.75))
-
-    def create_heatmap(self, bbox_list):
-        heatmap = np.zeros_like(self.image[:, :, 0]).astype(np.float)
-        for box in bbox_list:
-            # Add += 1 for all pixels inside each bbox
-            # Assuming each "box" takes the form ((x1, y1), (x2, y2))
-            self.heat[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
-
-    def apply_threshold(heatmap, threshold):
-        # Zero out pixels below the threshold
-        heatmap[heatmap <= threshold] = 0
-        # Return thresholded map
-        return heatmap
-
-    # locate vehicles in the new frame
-    def locate_vehicles(self):
-        # Iterate through all detected cars
-        self.heat[self.heat <= 1] = 0
-        # heatmap = np.clip(self.heat, 0, 255)
-        labels = label(self.heat)
-        self.car_list = []
-        for car_number in range(1, labels[1] + 1):
-            # Find pixels with each car_number label value
-            nonzero = (labels[0] == car_number).nonzero()
-            # Identify x and y values of those pixels
-            nonzeroy = np.array(nonzero[0])
-            nonzerox = np.array(nonzero[1])
-            # Define a bounding box based on min/max x and y
-
-            bbox = Box(((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy))))
-            bbox.heat = self.heat[bbox.center[1]][bbox.center[0]]
-
-            for pos in self.old_positions:
-                if pos.is_equal(bbox):
-                    self.old_positions.remove(pos)
-                    bbox.merge(pos)
-                    bbox.heat += 1
-
-            self.car_list.append(bbox)
-            # for pos in car_list:
-            #    self.old_positions.append(pos)
-            # print( ' 3 print(len(self.old_positions)) : ' , len(self.old_positions))
-
-    def search_vehicles(self, image):
-
-        # Uncomment the following line if you extracted training
-        # data from .png images (scaled 0 to 1 by mpimg) and the
-        # image you are searching is a .jpg (scaled 0 to 255)
-        image = image.astype(np.float32) / 255.
-        hot_windows = search_windows(image, self.search_windows, self.svc,
-                                     self.X_scaler, color_space=self.parameters['color_space'],
-                                     spatial_size=self.parameters['spatial_size'],
-                                     hist_bins=self.parameters['hist_bins'],
-                                     orient=self.parameters['orient'],
-                                     pix_per_cell=self.parameters['pix_per_cell'],
-                                     cell_per_block=self.parameters['cell_per_block'],
-                                     hog_channel=self.parameters['hog_channel'],
-                                     spatial_feat=self.parameters['spatial_feat'],
-                                     hist_feat=self.parameters['hist_feat'],
-                                     hog_feat=self.parameters['hog_feat'])
-        # window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)
-        self.create_heatmap(hot_windows)
-
-        # Find final boxes from heatmap using label function
-        self.locate_vehicles()
-        # self.age_heat_map()
-        print('hot_windows : ', len(hot_windows))
-        draw_image = draw_boxes(image, self.car_list)
-        return draw_image
-
-
 image = mpimg.imread('test_images/test1.jpg')
 
 vehicleDetertor = VehicleDetector(image)
@@ -298,17 +219,24 @@ import glob
 
 
 def add_heat(heatmap, bbox_list):
-    # Iterate through list of bboxes
+    """
+    Iterates through the box list and increment the value of the pixel for each box if the corresponding pixel is on the box
+    """
     for box in bbox_list:
         # Add += 1 for all pixels inside each bbox
         # Assuming each "box" takes the form ((x1, y1), (x2, y2))
         heatmap[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
 
     # Return updated heatmap
-    return heatmap  # Iterate through list of bboxes
+    return heatmap
 
 
 def apply_threshold(heatmap, threshold):
+    """
+    :param heatmap: previous heatmap to be updated
+    :param threshold:
+    :return: updated heatmap
+    """
     # Zero out pixels below the threshold
     heatmap[heatmap <= threshold] = 0
     # Return thresholded map
