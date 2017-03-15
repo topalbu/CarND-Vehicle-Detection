@@ -58,14 +58,14 @@ class Box:
             Checks if the given box has similar attributes
             :param other box to compare
         """
-        return self.close(other) & (abs(self.width - other.width) < 100) & (abs(self.height - other.height) < 100)
+        return self.close(other) & (abs(self.width - other.width) < 100) & (abs(self.height - other.height) < 50)
 
     def close(self, other):
         """
             Checks if the given box is closer in a certain threhold
             :param other box to compare
         """
-        return (self.calculate_distance(other) < 200)
+        return (self.calculate_distance(other) < 100)
 
     def calculate_width(self):
         """
@@ -204,7 +204,7 @@ class VehicleDetector:
                                             xy_window=(80, 80), xy_overlap=(0.75, 0.75))
         self.search_windows += slide_window(self.image.shape, x_start_stop=[None, None],
                                             y_start_stop=[400, 500],
-                                            xy_window=(100, 100), xy_overlap=(0.5, 0.5))
+                                            xy_window=(100, 100), xy_overlap=(0.75, 0.75))
         self.search_windows += slide_window(self.image.shape, x_start_stop=[None, None],
                                             y_start_stop=[420, 660],
                                             xy_window=(120, 120), xy_overlap=(0.5, 0.5))
@@ -247,17 +247,27 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
     # Make a copy of the image
     imcopy = np.copy(img)
     # Iterate through the bounding boxes 2
-
+    cars_N = len(bboxes)
+    found_N = 0
     for bbox in bboxes:
         # Draw a rectangle given bbox coordinates
-        if bbox.heat > 14:
+
+
+        if bbox.heat > 14 and bbox.age < 4:
             cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
+            found_N +=1
+            #this is for debugging
             font = cv2.FONT_HERSHEY_SIMPLEX
-            speed_text = "Heat: {0:.2f} ".format(bbox.heat)
-            cv2.putText(imcopy, speed_text, (int(bbox.center[0]), int(bbox.center[1])), font, 1, (255, 255, 255), 2)
+            age_text = "Age: {0:.2f} ".format(bbox.age)
+            cv2.putText(imcopy, age_text, (int(bbox.center[0]), int(bbox.center[1])), font, 1, (255, 0, 0), 2)
             # speed_text = "Y Speed: {0:.2f} ".format(bbox.speed[1])
             # cv2.putText(imcopy, speed_text, (int(bbox.center[0]),int(bbox.center[1]+20)), font, 1, (255, 255, 255), 2)
     # Return the image copy with boxes drawn
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    old_cars_text = "N of Cars: {0:.2f} ".format(cars_N)
+    found_text =  "N of Found Cars: {0:.2f} ".format(found_N)
+    cv2.putText(imcopy, old_cars_text, (10, 40), font, 1, (255, 255, 255), 2)
+    cv2.putText(imcopy, found_text, (10,80), font, 1, (255, 255, 255), 2)
     return imcopy
 
 
@@ -312,10 +322,13 @@ def locate_cars(img):
                 # print('is  equal : ')
                 car.calculate_speed(old_car)
                 car.heat = max(car.heat, old_car.heat) + 1
+                # to remove jittering we should apply a smoother
+                car.width = 0.8*car.width + 0.2*old_car.width
+                car.height = 0.8 * car.height + 0.2 * old_car.height
                 found = True
                 break
 
-        if not found and old_car.heat > 3 and old_car.age < 4:
+        if not found and old_car.heat > 5:# and old_car.age < 10:
             # print(' old car not found in the new frame but shoud be there :   ' ,old_car.heat)
             old_car.age += 1
             old_car.heat -= 1

@@ -5,7 +5,7 @@
 
 **Vehicle Detection Project**
 
-The goals / steps of this project are the following:
+The aim of this proejct is to track cars on a video stream by using image processing and machine learning techniques. To achieve the project spesification I 
 
 * Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a classifier Linear SVM classifier
 * Optionally, you can also apply a color transform and append binned color features, as well as histograms of color, to your HOG feature vector. 
