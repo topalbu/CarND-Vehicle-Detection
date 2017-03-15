@@ -5,14 +5,11 @@
 
 **Vehicle Detection Project**
 
-The aim of this proejct is to track cars on a video stream by using image processing and machine learning techniques. To achieve the project spesification I 
+The aim of this project is to track vehicles on a video stream by using image processing and machine learning techniques. 
+We can divide the pipeline by two different parts the first one is training of the model and the second is locating the vehicles by using the trained model. 
 
-* Perform a Histogram of Oriented Gradients (HOG) feature extraction on a labeled training set of images and train a classifier Linear SVM classifier
-* Optionally, you can also apply a color transform and append binned color features, as well as histograms of color, to your HOG feature vector. 
-* Note: for those first two steps don't forget to normalize your features and randomize a selection for training and testing.
-* Implement a sliding-window technique and use your trained classifier to search for vehicles in images.
-* Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
-* Estimate a bounding box for vehicles detected.
+The files of the repository. 
+* train.py contains model parameters and codes for feature extraction, training and testing of the model. 
 
 [//]: # (Image References)
 [image1]: ./examples/car_not_car.png

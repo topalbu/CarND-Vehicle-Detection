@@ -16,15 +16,18 @@ from sklearn.cross_validation import train_test_split
 import pickle
 import os
 
-
+#get directory of the car images
 car_images_path = os.getcwd()+'/vehicles'
 
+#load the car images data
 cars = [os.path.join(dirpath, f)
     for dirpath, dirnames, files in os.walk(car_images_path)
     for f in files if f.endswith('.png')]
 
+#get directory of the non-car images
 non_car_images_path = os.getcwd()+'/non-vehicles'
 
+#load the non-car images data
 notcars = [os.path.join(dirpath, f)
     for dirpath, dirnames, files in os.walk(non_car_images_path)
     for f in files if f.endswith('.png')]
