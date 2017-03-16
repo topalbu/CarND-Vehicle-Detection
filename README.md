@@ -12,7 +12,7 @@ All that said, please be concise!  We're not looking for you to write a book her
 
 You can submit your writeup in markdown or use another method and submit a pdf instead.
 
-# Feature Extaction and Selection. 
+# Feature Extraction and Selection. 
 ---
 To train a good classifier fot a given task first  we need to extract feature from the data. For this project we use histograms of colors, spatial binning of color and Histogram of Oriented Gradient (HOG)
  to extract the feature.
@@ -21,12 +21,17 @@ To train a good classifier fot a given task first  we need to extract feature fr
 
 1.) Spatial Binning of Color
 Firstly, we can use raw pixel values in our feature vector to search vehicles. However to include raw pixel values
-from all 3 channel put a lot of burden on the system. Therefore we decrease the resolution and still
-have a good information form the raw pixels to prevent to not exhaust the system.  So we use  cv2.resize() function 
-to decrease the resolution to 16x16 then we applied the ravel() function on resized image to get one dimensional feature vector. 
+from all 3 channel will put a huge burden on the system. Therefore we decrease the resolution and we see that it is still 
+a good information source Therefore **cv2.resize()** function is used to decrease the resolution to 16x16 then we applied the **ravel()** function on resized image to get one dimensional feature vector. 
 
 
+2. ) Histograms of Color 
+Color can be a good indicator to identify vehicles and non vehicles images. For that purpose first the image is converted 
+to **YCrCb** and we calculate histograms of pixel intensity of all 3 channels with histogram bin size 32. 
 
-2. )Histograms of Color 
-Color can be a good indicator to identify vehicles and non vehicles images. For that first image is converted 
-to YCrCb color space than 3 different histograms with bin size 32 are created. 
+3. ) Histogram of Oriented Gradients (HOG) 
+Histogram of Oriented Gradients is commonly used feature descriptor in image processing for object detection. To extract the HOG features 
+hog(image, orientations=9, pixels_per_cell=(8, 8), cells_per_block=(3, 3), block_norm='L1', visualise=False, transform_sqrt=False, feature_vector=True, normalise=None)
+method is used form skimage.feature package. 
+
+
