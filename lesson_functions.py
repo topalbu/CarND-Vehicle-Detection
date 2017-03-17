@@ -48,14 +48,28 @@ def color_hist(img, nbins=32, bins_range=(0, 256)):
 
 # Define a function to extract features from a list of images
 # Have this function call bin_spatial() and color_hist()
-def extract_features(imgs, color_space='RGB', spatial_size=(32, 32),
+def extract_features(images, color_space='RGB', spatial_size=(32, 32),
                      hist_bins=32, orient=9,
                      pix_per_cell=8, cell_per_block=2, hog_channel=0,
                      spatial_feat=True, hist_feat=True, hog_feat=True):
+    """
+    :param images: image data
+    :param color_space: color space to convert the image
+    :param spatial_size: size to reduce resolution
+    :param hist_bins: bin size for color histograms
+    :param orient: number of orientation bins
+    :param pix_per_cell: pixel size of a cell
+    :param cell_per_block: number of cells in each block
+    :param hog_channel: channel to be used for hog
+    :param spatial_feat: flag to check if spatial features will be used
+    :param hist_feat: flag to check if color histogram features will be used
+    :param hog_feat: flag to check if hog features will be used
+    :return: combined feature vector
+    """
     # Create a list to append feature vectors to
     features = []
     # Iterate through the list of images
-    for file in imgs:
+    for file in images:
         file_features = []
         # Read in each one by one
         image = mpimg.imread(file)
