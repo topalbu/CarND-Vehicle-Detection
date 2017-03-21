@@ -1,6 +1,4 @@
 import math
-import matplotlib.pyplot as plt
-import time
 from lesson_functions import *
 import pickle
 from scipy.ndimage.measurements import label
@@ -183,7 +181,7 @@ class VehicleDetector:
         """
         Method to load classifier, scaler and feature parameters from file
         """
-        with open('models/linear_svc.p', 'rb') as model_file:
+        with open('models/Final/linear_svc.p', 'rb') as model_file:
             model = pickle.load(model_file)
             self.svc = model['svc']
             self.X_scaler = model['X_scaler']
@@ -250,28 +248,32 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
     cars_N = len(bboxes)
     found_N = 0
     for bbox in bboxes:
-        # Draw a rectangle given bbox coordinates
-
-
-        if bbox.heat > 14 and bbox.age < 4:
+        # Draw a rectangles given bbox coordinates if the box heat is greater than 14 and the age is less then 4
+        if bbox.heat > 20 and bbox.age < 4:
             cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
             found_N +=1
             #this is for debugging
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            age_text = "Age: {0:.2f} ".format(bbox.age)
-            cv2.putText(imcopy, age_text, (int(bbox.center[0]), int(bbox.center[1])), font, 1, (255, 0, 0), 2)
+            #font = cv2.FONT_HERSHEY_SIMPLEX
+            #heat_text = "Heat: {0:.2f} ".format(bbox.heat)
+            #cv2.putText(imcopy, heat_text, (int(bbox.center[0]), int(bbox.center[1])), font, 1, (255, 0, 0), 2)
             # speed_text = "Y Speed: {0:.2f} ".format(bbox.speed[1])
             # cv2.putText(imcopy, speed_text, (int(bbox.center[0]),int(bbox.center[1]+20)), font, 1, (255, 255, 255), 2)
     # Return the image copy with boxes drawn
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    old_cars_text = "N of Cars: {0:.2f} ".format(cars_N)
-    found_text =  "N of Found Cars: {0:.2f} ".format(found_N)
-    cv2.putText(imcopy, old_cars_text, (10, 40), font, 1, (255, 255, 255), 2)
-    cv2.putText(imcopy, found_text, (10,80), font, 1, (255, 255, 255), 2)
+    #font = cv2.FONT_HERSHEY_SIMPLEX
+    #old_cars_text = "N of Cars: {0:.2f} ".format(cars_N)
+    #found_text =  "N of Found Cars: {0:.2f} ".format(found_N)
+    #cv2.putText(imcopy, old_cars_text, (10, 40), font, 1, (255, 255, 255), 2)
+    #cv2.putText(imcopy, found_text, (10,80), font, 1, (255, 255, 255), 2)
     return imcopy
 
 
 def draw_labeled_bboxes(img, labels):
+    '''
+
+    :param img: image file to put the rectangles on the found car postions
+    :param labels: labels from the heat map image
+    :return: image contains the rectangles according to labels
+    '''
     # Iterate through all detected cars
     for car_number in range(1, labels[1] + 1):
         # Find pixels with each car_number label value
@@ -292,8 +294,6 @@ def locate_cars(img):
     # Find final boxes from heatmap using label function
     # add_heat(img,vehicleDetertor.old_positions)
     # apply_threshold(img,len(vehicleDetertor.old_positions)-1)
-
-
     labels = label(img)
     car_list = []
     for car_number in range(1, labels[1] + 1):
@@ -322,13 +322,14 @@ def locate_cars(img):
                 # print('is  equal : ')
                 car.calculate_speed(old_car)
                 car.heat = max(car.heat, old_car.heat) + 1
-                # to remove jittering we should apply a smoother
+                # to remove jiggering we should apply a smoother
                 car.width = 0.8*car.width + 0.2*old_car.width
                 car.height = 0.8 * car.height + 0.2 * old_car.height
                 found = True
                 break
 
-        if not found and old_car.heat > 5:# and old_car.age < 10:
+        # if the old car has high heat value then put it on the list to not loose it (the model could't detect the vehicles well for every frames)
+        if not found and old_car.heat > 5:
             # print(' old car not found in the new frame but shoud be there :   ' ,old_car.heat)
             old_car.age += 1
             old_car.heat -= 1
@@ -356,8 +357,8 @@ def process_image(image):
 
     result1 = pool.apply_async(search_windows, A)  # evaluate "solve1(A)" asynchronously
     result2 = pool.apply_async(search_windows, B)  # evaluate "solve2(B)" asynchronously
-    result3 = pool.apply_async(search_windows, C)  # evaluate "solve1(A)" asynchronously
-    result4 = pool.apply_async(search_windows, D)  # evaluate "solve2(B)" asynchronously
+    result3 = pool.apply_async(search_windows, C)  # evaluate "solve1(C)" asynchronously
+    result4 = pool.apply_async(search_windows, D)  # evaluate "solve2(D)" asynchronously
     answer1 = result1.get(timeout=10)
     answer2 = result2.get(timeout=10)
     answer3 = result3.get(timeout=10)
@@ -404,23 +405,3 @@ clip1 = VideoFileClip('project_video.mp4')  # .subclip(21.00,25.00) # project vi
 # clip = VideoFileClip("myHolidays.mp4", audio=True).subclip(50,60)
 white_clip = clip1.fl_image(process_image)  # NOTE: this function expects color images!!
 white_clip.write_videofile(white_output, audio=False)
-
-# images = glob.glob('test_images/*.jpg')
-# for image_path in images:
-#     image = mpimg.imread(image_path)
-#     t = time.time()
-#     draw_image = process_image(image)
-#     t2 = time.time()
-#     print(round(t2 - t, 2), 'procesing time ...')
-#     print('Numer Of Cars = in old frame : ' , len(vehicleDetertor.old_positions))
-#     print('Numer Of Cars = in new frame : ', len(vehicleDetertor.car_list))
-#     vehicleDetertor.old_positions = vehicleDetertor.car_list
-#     fig = plt.figure()
-#     plt.subplot(121)
-#     plt.imshow(image)
-#     plt.title('Car Positions')
-#     plt.subplot(122)
-#     plt.imshow(draw_image, cmap='hot')
-#     plt.title('Heat Map')
-#     fig.tight_layout()
-#     plt.show()
